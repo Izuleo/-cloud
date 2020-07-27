@@ -1,37 +1,78 @@
-package com.example.final2;
+package com.example.led;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.graphics.Color;
 import android.os.Bundle;
-import android.webkit.WebChromeClient;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
+
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+
 
 public class MainActivity extends AppCompatActivity {
+    Button ledOnBtn;
+    Button ledOffBtn;
+    TextView textView;
 
-    WebView webView;
-    WebSettings WebSettings; //웹뷰세팅
+    FirebaseDatabase database = FirebaseDatabase.getInstance(); //Firebase 연동
+    DatabaseReference myRef = database.getReference("LED_STATUS"); //LED_STATUS 값 가져오기
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        webView = (WebView)findViewById(R.id.webView);
+        this.InitializeView();
+        this.SetListener();
+    }
 
-        WebSettings = webView.getSettings(); //1. 세부 세팅 등록
-        WebSettings.setJavaScriptEnabled(true); // 2. 웹페이지 자바스크립트 허용 여부
-        WebSettings.setLoadWithOverviewMode(true); // 3. 메타태그 허용 여부
-        WebSettings.setUseWideViewPort(true); // 4. 화면 사이즈 맞추기 허용 여부
-        WebSettings.setSupportZoom(false); // 5. 화면 줌 허용 여부
-        WebSettings.setBuiltInZoomControls(false); // 6. 화면 확대 축소 허용 여부
+    public void InitializeView() {
+        setTitle("LED Remote Control");
 
-        //7. 컨텐츠 사이즈 설정
-        WebSettings.setLayoutAlgorithm(android.webkit.WebSettings.LayoutAlgorithm.SINGLE_COLUMN);
+        ledOnBtn = (Button)findViewById(R.id.ledOnBtn);
+        ledOffBtn = (Button)findViewById(R.id.ledOffBtn);
+        textView = (TextView)findViewById(R.id.textView);
 
-        //8. 파일 경로 지정
-        String webUrlLocal = "file:///android_asset/project.html";
-        webView.loadUrl(webUrlLocal);
+        //textView에 LED_STATUS값 출력
+        textView.setText(myRef.getKey());
+    }
+
+    public  void SetListener() {
+        myRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                String ledState = (String) dataSnapshot.getValue(); //ledState에 저장
+                textView.setText("LED is " + ledState);             // textView에 출력
+            }
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+            }
+        });
+
+        //ON 클릭 시
+        ledOnBtn.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View view)
+            {
+                textView.setBackgroundColor(Color.Blue); //Background => Blue
+                myRef.setValue("ON");                   //DB값 "ON"
+            }
+        });
+
+        //OFF 클릭 시
+        ledOffBtn.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View view)
+            {
+                textView.setBackgroundColor(Color.Green); //Background => Green
+                myRef.setValue("OFF");                    //DB값 "OFF"
+            }
+        });
     }
 }
