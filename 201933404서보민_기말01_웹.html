@@ -1,0 +1,179 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <!--bootstrap -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+
+  <!--img 스타일 추가-->
+    <style>
+    img { width: 50px; height: auto; }
+    </style>
+</head>
+
+<body>
+
+ <div class="containe p-3 my-3 bg-dark text-white">
+    <p>firebase</p>
+    <h4> Weather Monitor using Firebase, NodeMCU</h4>
+  </div>
+
+
+  <div class="container">
+    <h2 id="temp"> </h2>
+    <div class="progress" style="height:30px">
+      <div class="progress-bar bg-danger  progress-bar-striped progress-bar-animated" style="width:29.1%; height:30px"></div>
+    </div>
+  </div>
+
+  <div class="container">
+    <h2 id="humi"> </h2>
+    <div class="progress" style="height:30px">
+      <div class="progress-bar progress-bar-striped progress-bar-animated" style="width:67%; height:30px"></div>
+    </div>
+  </div>
+
+
+    <!--그래프 -->
+    <div id="chart" style="height: 400px; width: 100%;"></div>
+
+</div>
+    <!--Firebase JS SDK -->
+    <script src="https://www.gstatic.com/firebasejs/7.15.5/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.15.5/firebase-analytics.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.15.5/firebase-database.js"></script>
+
+    <!-- canvasJS  -->
+    <script src="canvasjs.min.js"></script>
+
+    <script>
+        var firebaseConfig = {
+          apiKey: "AIzaSyDydc-V5hNN1txDFInFwCXfKB_WM9R0D4Y",
+          authDomain: "hellofirebase-e29a1.firebaseapp.com",
+          databaseURL: "https://hellofirebase-e29a1.firebaseio.com",
+          projectId: "hellofirebase-e29a1",
+          storageBucket: "hellofirebase-e29a1.appspot.com",
+          messagingSenderId: "514920126194",
+          appId: "1:514920126194:web:a68e5edcc0b2234a9e226b"
+        };
+        firebase.initializeApp(firebaseConfig);
+
+        //CnavasJS.Chart 생성
+        var chart = new CanvasJS.Chart("chart", {
+            animationEnabled: true,
+            title: {
+                text: "Cloud Weather Monitor 201933404 1반 서보민",
+                fontFamily: "Helvetica",
+                fontWeight: "bold",
+                fontColor: '#03254E',
+                fontSize: 22,
+            },
+            legend: {
+                fontSize: 15,
+            },
+            axisX: {
+                title: "Time",
+                suffix: "s",
+                titleFontSize: 14,
+                titleFontColor: '#03254E',
+                valueFormatString: 'HH:mm:ss',
+                labelFontColor: '#000000',
+            },
+            axisY: { //세로 왼쪽
+                title: "Temperature",
+                suffix: "°C",
+                valueFormatString: "0.0#",
+                minimum: 0,
+                maximum: 50,
+                titleFontColor: '#000000',
+                titleFontSize: 14,
+                labelFontColor: '#000000',
+            },
+            axisY2: { //세로 오른쪽
+                title: "Humidity",
+                suffix: "%",
+                valueFormatString: "0.0#",
+                minimum: 0,
+                maximum: 90,
+                titleFontColor: '#000000',
+                titleFontSize: 14,
+                labelFontColor: '#000000',
+            },
+            toolTip: {
+                shared: true,
+                //Custom toolTip 사용
+                contentFormatter: function(e) {
+                   //데이터 넣기
+                    var content = CanvasJS.formatDate(e.entries[0].dataPoint.x, "HH:mm:ss") + "<br>";
+                    content += "Humidity: " + e.entries[0].dataPoint.y + " &deg;C<br>";
+                    content += "Temperature: " + e.entries[1].dataPoint.y + " %";
+                    return content;
+                }
+            },
+            animationEnabled: true,
+            data: [{
+                type: "line",
+                name: "Humidity",
+                axisYType: "secondary",
+                showInLegend: true,
+                legendText: "Humidity",
+                markType: "circle",
+                markerSize: 1,
+                markerColor: "blue",
+                lineColor: "blue",
+                dataPoints: []   //Humidity 데이터 출력값 저장
+            }, {
+              type: "line",
+              name: "Temperature",
+              axisY2Type: "secondary",
+              showInLegend: true,
+              legendText: "Temperature",
+              markType: "circle",
+              markerSize: 1,
+              markerColor: "red",
+              lineColor: "red",
+                dataPoints: []  //Temperature 데이터 출력값 저장
+            }]
+        });
+
+        // Firebase DB에서 logDHT 값 얻어오기
+        var dbRef = firebase.database().ref('logDHT/');
+
+        dbRef.on('child_added', function(snapshot) {
+            var row = snapshot.val();
+            var newHumi = snapshot.val().humidity;    //습도값 저장
+            var newTemp = snapshot.val().temperature; //온도값 저장
+          humi.innerText = "Humidity : " + newHumi + "%";     //습도값 넣기
+          temp.innerText = "Temperature : " + newTemp + "℃"; //온도값 넣기
+
+            //DB로부터 받은 날짜 문자열을 CanvasJS에서 사용하려면
+            //Date객체형으로 변환해야 함
+            row.time = new Date(row.time);
+            chart.options.data[0].dataPoints.push({
+                x: row.time,
+                y: row.humidity
+            });
+            chart.options.data[1].dataPoints.push({
+              x: row.time,
+              y: row.temperature
+            });
+            chart.render();  //차트 출력
+        });
+
+        function printTime() { //현재시간 메소드
+            var clock = document.getElementById("clock");        //출력할 장소
+            var now = new Date();                                //현재시간을 가져옴
+            var nowTime = now.getFullYear() + "년 " + (now.getMonth()+1) + "월 " + now.getDate()
+            + "일 " + now.getHours() + "시 " + now.getMinutes() + "분 " + now.getSeconds() + "초 ";
+
+            clock.innerHTML = nowTime;      //위에 가져온 걸 clock에 넣어주기
+            setTimeout("printTime()",1000); //setTimeout(“실행할함수”, 시간);
+       }window.onload = function() {
+            printTime();
+       }
+    </script>
+
+</body>
+</html>
